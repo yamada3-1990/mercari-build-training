@@ -27,8 +27,6 @@ type Server struct {
 // This method returns 0 if the server started successfully, and 1 otherwise.
 func (s Server) Run() int {
 	// set up logger
-	// STEP 4-6: set the log level to DEBUG
-	// levelInfo から levelDebugに変更??? できない
 	opts := slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}
@@ -42,10 +40,19 @@ func (s Server) Run() int {
 	}
 
 	// STEP 5-1: set up the database connection
-	var db *sql.DB
+	db, err := sql.Open("sqlite3", "db/mercari.sqlite3")
+	if err != nil {
+		slog.Error("failed to open database: ", "error", err)
+		return 1
+	}
+	defer db.Close()
 
 	// set up handlers
-	itemRepo := NewItemRepository(db)
+	itemRepo, err := NewItemRepository(db)
+	if err != nil {
+		slog.Error("failed to create item repository: ", "error", err)
+		return 1
+	}
 	h := &Handlers{imgDirPath: s.ImageDirPath, itemRepo: itemRepo}
 
 	// set up routes
@@ -59,7 +66,7 @@ func (s Server) Run() int {
 
 	// start the server
 	slog.Info("http server started on", "port", s.Port)
-	err := http.ListenAndServe(":"+s.Port, simpleCORSMiddleware(simpleLoggerMiddleware(mux), frontURL, []string{"GET", "HEAD", "POST", "OPTIONS"}))
+	err = http.ListenAndServe(":"+s.Port, simpleCORSMiddleware(simpleLoggerMiddleware(mux), frontURL, []string{"GET", "HEAD", "POST", "OPTIONS"}))
 	if err != nil {
 		slog.Error("failed to start server: ", "error", err)
 		return 1
@@ -171,39 +178,6 @@ func parseAddItemRequest(r *http.Request) (*AddItemRequest, error) {
 // AddItem is a handler to add a new item for POST /items .
 func (s *Handlers) AddItem(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	db, err := sql.Open("sqlite3", "db/mercari.sqlite3")
-	if err != nil {
-		return
-	}
-	defer db.Close()
-
-	// items tableがなかったら作成
-	_, err = db.Exec(`
-			CREATE TABLE IF NOT EXISTS items (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				name TEXT NOT NULL,
-				category_id INTEGER,
-				image_name TEXT NOT NULL,
-				FOREIGN KEY (category_id) REFERENCES categories(id)
-			);
-        `)
-	if err != nil {
-		slog.Error("failed to create items table: ", "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	// categories tableが無かったら作成
-	_, err = db.Exec(`
-            CREATE TABLE IF NOT EXISTS categories (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				name TEXT NOT NULL UNIQUE
-			);
-        `)
-	if err != nil {
-		slog.Error("failed to create categories table: ", "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 
 	req, err := parseAddItemRequest(r)
 	if err != nil {
@@ -234,7 +208,8 @@ func (s *Handlers) AddItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	message := fmt.Sprintf("item received: %s", item.Name)
-	slog.Info(message)
+	// slog.Info(message)
+	fmt.Fprint(w, message)
 
 	// resp := AddItemResponse{Message: message}
 	// err = json.NewEncoder(w).Encode(resp)

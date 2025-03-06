@@ -4,35 +4,27 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log/slog"
 	"os"
 	"path/filepath"
 
-	// STEP 5-1: uncomment this line
 	_ "github.com/mattn/go-sqlite3"
 )
 
 var errImageNotFound = errors.New("image not found")
 var errItemNotFound = errors.New("item not found")
 
-var Db *sql.DB
-
 type Item struct {
-	ID   int    `db:"id" json:"-"`
-	Name string `db:"name" json:"name"`
-	// CategoryID int    `db:"category_id" json:"-"`
+	ID       int    `db:"id" json:"-"`
+	Name     string `db:"name" json:"name"`
 	Category string `json:"category"`
 	Image    string `db:"image" json:"image"`
 }
 
 type Category struct {
-	// ID   int    `db:"id" json:"-"`
 	Name string `db:"category" json:"category"`
 }
 
-// Please run `go generate ./...` to generate the mock implementation
-// ItemRepository is an interface to manage items.
-//
-//go:generate go run go.uber.org/mock/mockgen -source=$GOFILE -package=${GOPACKAGE} -destination=./mock_$GOFILE
 type ItemRepository interface {
 	Insert(ctx context.Context, item *Item) error
 	GetAll(ctx context.Context) ([]Item, error)
@@ -40,34 +32,51 @@ type ItemRepository interface {
 	SearchItemsByKeyword(ctx context.Context, keyword string) ([]Item, error)
 }
 
-// itemRepository is an implementation of ItemRepository
 type itemRepository struct {
-	// fileName is the path to the JSON file storing items.
 	db *sql.DB
 }
 
-// NewItemRepository creates a new itemRepository.
-// main.goを実行するディレクトリによってfileNameを変更する
-func NewItemRepository(db *sql.DB) ItemRepository {
-	return &itemRepository{db: db}
+func NewItemRepository(db *sql.DB) (ItemRepository, error) {
+	// items tableがなかったら作成
+	query := `
+        CREATE TABLE IF NOT EXISTS items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            category_id INTEGER,
+            image_name TEXT NOT NULL,
+            FOREIGN KEY (category_id) REFERENCES categories(id)
+        );
+    `
+	_, err := db.Exec(query)
+	if err != nil {
+		slog.Error("failed to create items table", "error", err)
+		return nil, err // エラーを返す
+	}
+
+	// categories tableが無かったら作成
+	query = `
+        CREATE TABLE IF NOT EXISTS categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+        );
+    `
+	_, err = db.Exec(query)
+	if err != nil {
+		slog.Error("failed to create categories table: ", "error", err)
+		return nil, err // エラーを返す
+	}
+	return &itemRepository{db: db}, nil
 }
 
-// Insert inserts an item into the repository.
 func (i *itemRepository) Insert(ctx context.Context, item *Item) error {
-	// mercari.sqlite3に接続
-	Db, _ := sql.Open("sqlite3", "db/mercari.sqlite3")
-	defer Db.Close()
-
 	var categoryID int
-	err := Db.QueryRow("SELECT id FROM categories WHERE name = ?", item.Category).Scan(&categoryID)
+	err := i.db.QueryRow("SELECT id FROM categories WHERE name = ?", item.Category).Scan(&categoryID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			// カテゴリが存在しない場合はcategoriesテーブルに挿入
-			res, err := Db.Exec("INSERT INTO categories (name) VALUES (?)", item.Category)
+			res, err := i.db.Exec("INSERT INTO categories (name) VALUES (?)", item.Category)
 			if err != nil {
 				return err
 			}
-			// 挿入したカテゴリのIDを取得
 			id, err := res.LastInsertId()
 			if err != nil {
 				return err
@@ -78,9 +87,8 @@ func (i *itemRepository) Insert(ctx context.Context, item *Item) error {
 		}
 	}
 
-	// DBにitemをインサート
 	query := "INSERT INTO items (name, category_id, image_name) VALUES (?, ?, ?)"
-	_, err = Db.Exec(query, item.Name, categoryID, item.Image)
+	_, err = i.db.Exec(query, item.Name, categoryID, item.Image)
 	if err != nil {
 		return err
 	}
@@ -88,86 +96,70 @@ func (i *itemRepository) Insert(ctx context.Context, item *Item) error {
 	return nil
 }
 
-// GetAll()
 func (i *itemRepository) GetAll(ctx context.Context) ([]Item, error) {
-	// mercari.sqlite3に接続
-	Db, _ := sql.Open("sqlite3", "db/mercari.sqlite3")
-	defer Db.Close()
-
 	query := `
-    SELECT
-        items.id,
-        items.name,
-        categories.name AS category,
-        items.image_name
-    FROM
-        items
-    INNER JOIN
-        categories ON items.category_id = categories.id;
-`
-	rows, _ := Db.Query(query)
+        SELECT
+            items.id,
+            items.name,
+            categories.name AS category,
+            items.image_name
+        FROM
+            items
+        INNER JOIN
+            categories ON items.category_id = categories.id;
+    `
+	rows, err := i.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
 
 	var items []Item
 	for rows.Next() {
-		var i Item
-		err := rows.Scan(&i.ID, &i.Name, &i.Category, &i.Image)
+		var item Item
+		err := rows.Scan(&item.ID, &item.Name, &item.Category, &item.Image)
 		if err != nil {
-			return []Item{}, err
+			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, item)
 	}
 
 	return items, nil
 }
 
-// StoreImage stores an image and returns an error if any.
-// This package doesn't have a related interface for simplicity.
 func StoreImage(fileName string, image []byte) error {
-	// STEP 4-4: add an implementation to store an image
-
-	// 保存先
 	savePath := filepath.Join("images", fileName)
-
-	// バックスラッシュをスラッシュに
 	savePath = filepath.ToSlash(savePath)
-	// ファイルを保存
 	err := os.WriteFile(savePath, image, 0644)
 	if err != nil {
 		return err
 	}
-
 	return nil
-
 }
 
-// GetItemById()
 func (i *itemRepository) GetItemById(ctx context.Context, item_id string) (Item, error) {
-	// mercari.sqlite3に接続
-	Db, _ := sql.Open("sqlite3", "db/mercari.sqlite3")
-	defer Db.Close()
-
-	query := "SELECT * FROM where id = ?"
-	row := Db.QueryRow(query, item_id)
+	query := "SELECT id, name, category_id, image_name FROM items WHERE id = ?"
+	row := i.db.QueryRow(query, item_id)
 	var item Item
-	err := row.Scan(&item.ID, &item.Name, &item.Category, &item.Image)
+	var categoryID int
+	err := row.Scan(&item.ID, &item.Name, &categoryID, &item.Image)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return Item{}, errors.New("no row")
+			return Item{}, errItemNotFound
 		} else {
 			return Item{}, err
 		}
+	}
+	//categoryIDからcategoryNameを取得
+	err = i.db.QueryRow("SELECT name from categories where id = ?", categoryID).Scan(&item.Category)
+	if err != nil {
+		return Item{}, err
 	}
 
 	return item, nil
 }
 
-// SearchItemsByKeyword()
 func (i *itemRepository) SearchItemsByKeyword(ctx context.Context, keyword string) ([]Item, error) {
-	// mercari.sqlite3に接続
-	Db, _ := sql.Open("sqlite3", "db/mercari.sqlite3")
-	defer Db.Close()
-
 	query := `
         SELECT
             items.id,
@@ -179,10 +171,10 @@ func (i *itemRepository) SearchItemsByKeyword(ctx context.Context, keyword strin
         INNER JOIN
             categories ON items.category_id = categories.id
         WHERE
-			items.name LIKE ?
-        `
+            items.name LIKE ?
+    `
 
-	rows, err := Db.Query(query, "%"+keyword+"%")
+	rows, err := i.db.Query(query, "%"+keyword+"%")
 	if err != nil {
 		return nil, err
 	}
@@ -190,12 +182,12 @@ func (i *itemRepository) SearchItemsByKeyword(ctx context.Context, keyword strin
 
 	var items []Item
 	for rows.Next() {
-		var i Item
-		err := rows.Scan(&i.ID, &i.Name, &i.Category, &i.Image)
+		var item Item
+		err := rows.Scan(&item.ID, &item.Name, &item.Category, &item.Image)
 		if err != nil {
-			return []Item{}, err
+			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, item)
 	}
 
 	return items, nil
@@ -251,6 +243,10 @@ HTTPステータスコード (1XX, 2XX, 3XX, 4XX, 5XXはそれぞれどんな意
 *** STEP 5 ***
 jsonファイルではなくデータベース(SQLite)にデータを保存する利点は何がありますか？
 	-> dbだとデータの整合性がとりやすい、データ操作・検索が効率的(jsonだとファイル全体を読む込む必要がある)
+
+データベースの正規化とは何でしょうか？
+	-> データの重複を排除し、データの整合性を保つためのプロセス
+	-> これは第二正規形?
 
 */
 

@@ -97,11 +97,24 @@ func (s *Handlers) GetItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// itemsをラップ
 	response := struct {
-		Items []Item `json:"items"`
-	}{
-		Items: items,
+		Items []struct {
+			Name     string `json:"name"`
+			Category string `json:"category"`
+			Image    string `json:"image"`
+		} `json:"items"`
+	}{}
+
+	for _, item := range items {
+		response.Items = append(response.Items, struct {
+			Name     string `json:"name"`
+			Category string `json:"category"`
+			Image    string `json:"image"`
+		}{
+			Name:     item.Name,
+			Category: item.Category,
+			Image:    item.Image,
+		})
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -112,9 +125,9 @@ func (s *Handlers) GetItems(w http.ResponseWriter, r *http.Request) {
 }
 
 type AddItemRequest struct {
-	Name     string `form:"name"`
-	Category string `form:"category"` // STEP 4-2: add a category field -- done
-	Image    []byte `form:"image"`    // STEP 4-4: add an image field -- done
+	Name     string   `form:"name"`
+	Category Category `form:"category"` // STEP 4-2: add a category field -- done
+	Image    []byte   `form:"image"`    // STEP 4-4: add an image field -- done
 }
 
 type AddItemResponse struct {
@@ -124,9 +137,11 @@ type AddItemResponse struct {
 // parseAddItemRequest parses and validates the request to add an item.
 func parseAddItemRequest(r *http.Request) (*AddItemRequest, error) {
 	req := &AddItemRequest{
-		Name:     r.FormValue("name"),
-		Category: r.FormValue("category"),
-		Image:    []byte(r.FormValue("image")),
+		Name: r.FormValue("name"),
+		Category: Category{
+			Name: r.FormValue("category"),
+		},
+		Image: []byte(r.FormValue("image")),
 	}
 
 	// validate the request
@@ -135,7 +150,7 @@ func parseAddItemRequest(r *http.Request) (*AddItemRequest, error) {
 	}
 
 	// STEP 4-2: validate the category field -- done
-	if req.Category == "" {
+	if req.Category.Name == "" {
 		return nil, errors.New("category is required")
 	}
 	// STEP 4-4: validate the image field -- done
@@ -162,16 +177,31 @@ func (s *Handlers) AddItem(w http.ResponseWriter, r *http.Request) {
 	}
 	defer db.Close()
 
-	// tableがなかったら作成
+	// items tableがなかったら作成
 	_, err = db.Exec(`
-            CREATE TABLE IF NOT EXISTS items (
+			CREATE TABLE IF NOT EXISTS items (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				name TEXT NOT NULL,
-				category TEXT NOT NULL,
-				image_name TEXT NOT NULL
+				category_id INTEGER,
+				image_name TEXT NOT NULL,
+				FOREIGN KEY (category_id) REFERENCES categories(id)
 			);
         `)
 	if err != nil {
+		slog.Error("failed to create items table: ", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// categories tableが無かったら作成
+	_, err = db.Exec(`
+            CREATE TABLE IF NOT EXISTS categories (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				name TEXT NOT NULL UNIQUE
+			);
+        `)
+	if err != nil {
+		slog.Error("failed to create categories table: ", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -191,7 +221,7 @@ func (s *Handlers) AddItem(w http.ResponseWriter, r *http.Request) {
 
 	item := &Item{
 		Name:     req.Name,
-		Category: req.Category,
+		Category: req.Category.Name,
 		Image:    strings.TrimPrefix(string(fileName), "images/"),
 	}
 
@@ -383,6 +413,7 @@ func (s *Handlers) SearchItemsByKeyword(w http.ResponseWriter, r *http.Request) 
 	req, err := parseGetItemByKeywordRequest(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	items, err := s.itemRepo.SearchItemsByKeyword(r.Context(), req.Keyword)
@@ -394,6 +425,10 @@ func (s *Handlers) SearchItemsByKeyword(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	if items == nil {
+		items = []Item{}
 	}
 
 	// jsonに変換

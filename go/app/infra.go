@@ -17,10 +17,16 @@ var errItemNotFound = errors.New("item not found")
 var Db *sql.DB
 
 type Item struct {
-	ID       int    `db:"id" json:"-"`
-	Name     string `db:"name" json:"name"`
-	Category string `db:"category" json:"category"`
+	ID   int    `db:"id" json:"-"`
+	Name string `db:"name" json:"name"`
+	// CategoryID int    `db:"category_id" json:"-"`
+	Category string `json:"category"`
 	Image    string `db:"image" json:"image"`
+}
+
+type Category struct {
+	// ID   int    `db:"id" json:"-"`
+	Name string `db:"category" json:"category"`
 }
 
 // Please run `go generate ./...` to generate the mock implementation
@@ -52,9 +58,29 @@ func (i *itemRepository) Insert(ctx context.Context, item *Item) error {
 	Db, _ := sql.Open("sqlite3", "db/mercari.sqlite3")
 	defer Db.Close()
 
+	var categoryID int
+	err := Db.QueryRow("SELECT id FROM categories WHERE name = ?", item.Category).Scan(&categoryID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// カテゴリが存在しない場合はcategoriesテーブルに挿入
+			res, err := Db.Exec("INSERT INTO categories (name) VALUES (?)", item.Category)
+			if err != nil {
+				return err
+			}
+			// 挿入したカテゴリのIDを取得
+			id, err := res.LastInsertId()
+			if err != nil {
+				return err
+			}
+			categoryID = int(id)
+		} else {
+			return err
+		}
+	}
+
 	// DBにitemをインサート
-	query := "INSERT INTO items (name, category, image_name) VALUES (?, ?, ?)"
-	_, err := Db.Exec(query, item.Name, item.Category, item.Image)
+	query := "INSERT INTO items (name, category_id, image_name) VALUES (?, ?, ?)"
+	_, err = Db.Exec(query, item.Name, categoryID, item.Image)
 	if err != nil {
 		return err
 	}
@@ -68,7 +94,17 @@ func (i *itemRepository) GetAll(ctx context.Context) ([]Item, error) {
 	Db, _ := sql.Open("sqlite3", "db/mercari.sqlite3")
 	defer Db.Close()
 
-	query := "SELECT * FROM items"
+	query := `
+    SELECT
+        items.id,
+        items.name,
+        categories.name AS category,
+        items.image_name
+    FROM
+        items
+    INNER JOIN
+        categories ON items.category_id = categories.id;
+`
 	rows, _ := Db.Query(query)
 	defer rows.Close()
 
@@ -132,7 +168,20 @@ func (i *itemRepository) SearchItemsByKeyword(ctx context.Context, keyword strin
 	Db, _ := sql.Open("sqlite3", "db/mercari.sqlite3")
 	defer Db.Close()
 
-	query := "SELECT * FROM items WHERE name LIKE ?"
+	query := `
+        SELECT
+            items.id,
+            items.name,
+            categories.name AS category,
+            items.image_name
+        FROM
+            items
+        INNER JOIN
+            categories ON items.category_id = categories.id
+        WHERE
+			items.name LIKE ?
+        `
+
 	rows, err := Db.Query(query, "%"+keyword+"%")
 	if err != nil {
 		return nil, err

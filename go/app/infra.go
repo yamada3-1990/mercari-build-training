@@ -31,6 +31,7 @@ type ItemRepository interface {
 	Insert(ctx context.Context, item *Item) error
 	GetAll(ctx context.Context) ([]Item, error)
 	GetItemById(ctx context.Context, item_id string) (Item, error)
+	SearchItemsByKeyword(ctx context.Context, keyword string) ([]Item, error)
 }
 
 // itemRepository is an implementation of ItemRepository
@@ -123,6 +124,32 @@ func (i *itemRepository) GetItemById(ctx context.Context, item_id string) (Item,
 	}
 
 	return item, nil
+}
+
+// SearchItemsByKeyword()
+func (i *itemRepository) SearchItemsByKeyword(ctx context.Context, keyword string) ([]Item, error) {
+	// mercari.sqlite3に接続
+	Db, _ := sql.Open("sqlite3", "db/mercari.sqlite3")
+	defer Db.Close()
+
+	query := "SELECT * FROM items WHERE name LIKE ?"
+	rows, err := Db.Query(query, "%"+keyword+"%")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []Item
+	for rows.Next() {
+		var i Item
+		err := rows.Scan(&i.ID, &i.Name, &i.Category, &i.Image)
+		if err != nil {
+			return []Item{}, err
+		}
+		items = append(items, i)
+	}
+
+	return items, nil
 }
 
 /*

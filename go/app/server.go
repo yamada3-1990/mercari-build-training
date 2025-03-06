@@ -55,6 +55,7 @@ func (s Server) Run() int {
 	mux.HandleFunc("GET /items", h.GetItems)
 	mux.HandleFunc("GET /images/{filename}", h.GetImage)
 	mux.HandleFunc("GET /items/{item_id}", h.GetItemById)
+	mux.HandleFunc("GET /search", h.SearchItemsByKeyword)
 
 	// start the server
 	slog.Info("http server started on", "port", s.Port)
@@ -308,7 +309,7 @@ func (s *Handlers) buildImagePath(imageFileName string) (string, error) {
 	return imgPath, nil
 }
 
-// GetItemById
+/* GetItemById */
 type GetItemByIdRequest struct {
 	Id string
 }
@@ -354,6 +355,58 @@ func (s *Handlers) GetItemById(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonData)
 }
 
+/* SearchItemsByKeyword */
+type GetItemByKeywordRequest struct {
+	Keyword string
+}
+
+func parseGetItemByKeywordRequest(r *http.Request) (*GetItemByKeywordRequest, error) {
+	req := &GetItemByKeywordRequest{
+		Keyword: r.URL.Query().Get("keyword"),
+	}
+
+	// validate the request
+	if req.Keyword == "" {
+		return nil, errors.New("id is required")
+	}
+
+	return req, nil
+}
+
+func (s *Handlers) SearchItemsByKeyword(w http.ResponseWriter, r *http.Request) {
+	db, err := sql.Open("sqlite3", "db/mercari.sqlite3")
+	if err != nil {
+		return
+	}
+	defer db.Close()
+
+	req, err := parseGetItemByKeywordRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	items, err := s.itemRepo.SearchItemsByKeyword(r.Context(), req.Keyword)
+
+	if err != nil {
+		if errors.Is(err, errItemNotFound) {
+			slog.Warn("item not exist: ", "error", err)
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	// jsonに変換
+	jsonData, err := json.Marshal(items)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
+}
+
 /*
 	そもそもハンドラーとは
 	-> HTTPリクエストを受け取り、適切なレスポンスを返す関数
@@ -366,5 +419,10 @@ func (s *Handlers) GetItemById(w http.ResponseWriter, r *http.Request) {
 	-F 'name=jacket' \
 	-F 'category=fashion' \
 	-F 'image=@images/local_image.jpg' <-ローカルのuploadしたいiamgeのパス "image=go/images/default.jpg"とか
+
+	r.PathValue と r.URL.Query().Get
+	-> http@//127.0.0.1:9000/Path?<query parameter>
+	-> r.PathValue: Pathを取得　/items/{item_id}だと{item_id}を取得する
+	-> r.URL.Query().Get: クエリパラメータを取得　/search?keyword=jacketだとjacketを取得
 
 */

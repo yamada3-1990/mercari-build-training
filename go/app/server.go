@@ -133,8 +133,8 @@ func (s *Handlers) GetItems(w http.ResponseWriter, r *http.Request) {
 
 type AddItemRequest struct {
 	Name     string   `form:"name"`
-	Category Category `form:"category"` // STEP 4-2: add a category field -- done
-	Image    []byte   `form:"image"`    // STEP 4-4: add an image field -- done
+	Category Category `form:"category"`
+	Image    []byte   `form:"image"`
 }
 
 type AddItemResponse struct {
@@ -151,16 +151,15 @@ func parseAddItemRequest(r *http.Request) (*AddItemRequest, error) {
 		Image: []byte(r.FormValue("image")),
 	}
 
-	// validate the request
+	// validation
 	if req.Name == "" {
 		return nil, errors.New("name is required")
 	}
 
-	// STEP 4-2: validate the category field -- done
 	if req.Category.Name == "" {
 		return nil, errors.New("category is required")
 	}
-	// STEP 4-4: validate the image field -- done
+
 	if string(req.Image) == "" {
 		return nil, errors.New("image is required")
 	}
@@ -185,7 +184,6 @@ func (s *Handlers) AddItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// STEP 4-4: uncomment on adding an implementation to store an image -- done
 	fileName, err := s.storeImage(req.Image)
 	if err != nil {
 		slog.Error("failed to store image: ", "error", err)
@@ -208,23 +206,13 @@ func (s *Handlers) AddItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	message := fmt.Sprintf("item received: %s", item.Name)
-	// slog.Info(message)
 	fmt.Fprint(w, message)
-
-	// resp := AddItemResponse{Message: message}
-	// err = json.NewEncoder(w).Encode(resp)
-	// if err != nil {
-	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
 }
 
 // storeImage stores an image and returns the file path and an error if any.
 // this method calculates the hash sum of the image as a file name to avoid the duplication of a same file
 // and stores it in the image directory.
 func (s *Handlers) storeImage(image []byte) (filePath string, err error) {
-	// STEP 4-4: add an implementation to store an image
-	// TODO:
 	// - calc hash sum
 	hash := sha256.Sum256(image)
 	// - build image file path
@@ -367,10 +355,11 @@ type GetItemByKeywordRequest struct {
 
 func parseGetItemByKeywordRequest(r *http.Request) (*GetItemByKeywordRequest, error) {
 	req := &GetItemByKeywordRequest{
+		// クエリパラメータを取得
 		Keyword: r.URL.Query().Get("keyword"),
 	}
 
-	// validate the request
+	// validation
 	if req.Keyword == "" {
 		return nil, errors.New("id is required")
 	}
@@ -379,12 +368,6 @@ func parseGetItemByKeywordRequest(r *http.Request) (*GetItemByKeywordRequest, er
 }
 
 func (s *Handlers) SearchItemsByKeyword(w http.ResponseWriter, r *http.Request) {
-	db, err := sql.Open("sqlite3", "db/mercari.sqlite3")
-	if err != nil {
-		return
-	}
-	defer db.Close()
-
 	req, err := parseGetItemByKeywordRequest(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

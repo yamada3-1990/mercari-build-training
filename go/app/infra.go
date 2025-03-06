@@ -36,6 +36,9 @@ type itemRepository struct {
 	db *sql.DB
 }
 
+// 返り値を増やした
+// -> server.goのRun()でNewItemRepositoryのerrを検知できずに
+// nilのitemRepoを使用したことによるnil参照panicを防ぐ
 func NewItemRepository(db *sql.DB) (ItemRepository, error) {
 	// items tableがなかったら作成
 	query := `
@@ -50,7 +53,7 @@ func NewItemRepository(db *sql.DB) (ItemRepository, error) {
 	_, err := db.Exec(query)
 	if err != nil {
 		slog.Error("failed to create items table", "error", err)
-		return nil, err // エラーを返す
+		return nil, err
 	}
 
 	// categories tableが無かったら作成
@@ -63,20 +66,25 @@ func NewItemRepository(db *sql.DB) (ItemRepository, error) {
 	_, err = db.Exec(query)
 	if err != nil {
 		slog.Error("failed to create categories table: ", "error", err)
-		return nil, err // エラーを返す
+		return nil, err
 	}
 	return &itemRepository{db: db}, nil
 }
 
 func (i *itemRepository) Insert(ctx context.Context, item *Item) error {
 	var categoryID int
+
+	// categories tableから(categories tableの)name = item.Categoryのidを取得
 	err := i.db.QueryRow("SELECT id FROM categories WHERE name = ?", item.Category).Scan(&categoryID)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			// 該当する行がなかったら = 新しいカテゴリーだったら
+			// categories tableのnameにitem.Categoryの値をinsert
 			res, err := i.db.Exec("INSERT INTO categories (name) VALUES (?)", item.Category)
 			if err != nil {
 				return err
 			}
+			// 最後に挿入された自動採番(AUTOINCREMENT)のidを取得
 			id, err := res.LastInsertId()
 			if err != nil {
 				return err
@@ -86,7 +94,7 @@ func (i *itemRepository) Insert(ctx context.Context, item *Item) error {
 			return err
 		}
 	}
-
+	// insert
 	query := "INSERT INTO items (name, category_id, image_name) VALUES (?, ?, ?)"
 	_, err = i.db.Exec(query, item.Name, categoryID, item.Image)
 	if err != nil {
@@ -97,6 +105,7 @@ func (i *itemRepository) Insert(ctx context.Context, item *Item) error {
 }
 
 func (i *itemRepository) GetAll(ctx context.Context) ([]Item, error) {
+	// itemsとcategoriesをいったんinner join
 	query := `
         SELECT
             items.id,
@@ -160,6 +169,7 @@ func (i *itemRepository) GetItemById(ctx context.Context, item_id string) (Item,
 }
 
 func (i *itemRepository) SearchItemsByKeyword(ctx context.Context, keyword string) ([]Item, error) {
+	// itemsとcategoriesをいったんinner join
 	query := `
         SELECT
             items.id,
@@ -174,6 +184,8 @@ func (i *itemRepository) SearchItemsByKeyword(ctx context.Context, keyword strin
             items.name LIKE ?
     `
 
+	// queryの?部分がkeywordで置き換えられる
+	// % はワイルドカード文字: 0文字以上の任意の文字列
 	rows, err := i.db.Query(query, "%"+keyword+"%")
 	if err != nil {
 		return nil, err

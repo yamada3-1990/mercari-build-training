@@ -2,13 +2,10 @@ package app
 
 import (
 	"crypto/sha256"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	// "io/ioutil"
-	// "io"
-	"database/sql"
 	"log/slog"
 	"net/http"
 	"os"
@@ -132,9 +129,9 @@ func (s *Handlers) GetItems(w http.ResponseWriter, r *http.Request) {
 }
 
 type AddItemRequest struct {
-	Name     string   `form:"name"`
-	Category Category `form:"category"`
-	Image    []byte   `form:"image"`
+	Name     string `form:"name"`
+	Category string `form:"category"`
+	Image    []byte `form:"image"`
 }
 
 type AddItemResponse struct {
@@ -144,11 +141,9 @@ type AddItemResponse struct {
 // parseAddItemRequest parses and validates the request to add an item.
 func parseAddItemRequest(r *http.Request) (*AddItemRequest, error) {
 	req := &AddItemRequest{
-		Name: r.FormValue("name"),
-		Category: Category{
-			Name: r.FormValue("category"),
-		},
-		Image: []byte(r.FormValue("image")),
+		Name:     r.FormValue("name"),
+		Category: r.FormValue("category"),
+		Image:    []byte(r.FormValue("image")),
 	}
 
 	// validation
@@ -156,7 +151,7 @@ func parseAddItemRequest(r *http.Request) (*AddItemRequest, error) {
 		return nil, errors.New("name is required")
 	}
 
-	if req.Category.Name == "" {
+	if req.Category == "" {
 		return nil, errors.New("category is required")
 	}
 
@@ -193,7 +188,7 @@ func (s *Handlers) AddItem(w http.ResponseWriter, r *http.Request) {
 
 	item := &Item{
 		Name:     req.Name,
-		Category: req.Category.Name,
+		Category: req.Category,
 		Image:    strings.TrimPrefix(string(fileName), "images/"),
 	}
 

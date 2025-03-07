@@ -19,20 +19,20 @@ func TestParseAddItemRequest(t *testing.T) {
 		err bool
 	}
 
-	// STEP 6-1: define test cases
+	// STEP 6-1: define test cases --done
 	cases := map[string]struct {
 		args map[string]string
 		wants
 	}{
 		"ok: valid request": {
 			args: map[string]string{
-				"name":     "", // fill here
-				"category": "", // fill here
+				"name":     "test",
+				"category": "test",
 			},
 			wants: wants{
 				req: &AddItemRequest{
-					Name: "", // fill here
-					// Category: "", // fill here
+					Name:     "test",
+					Category: Category{Name: "test"},
 				},
 				err: false,
 			},

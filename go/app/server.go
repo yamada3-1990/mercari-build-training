@@ -408,9 +408,11 @@ func (s *Handlers) SearchItemsByKeyword(w http.ResponseWriter, r *http.Request) 
 	-F 'category=fashion' \
 	-F 'image=@images/local_image.jpg' <-ローカルのuploadしたいiamgeのパス "image=go/images/default.jpg"とか
 
+
 	r.PathValue と r.URL.Query().Get
 	-> http@//127.0.0.1:9000/Path?<query parameter>
 	-> r.PathValue: Pathを取得　/items/{item_id}だと{item_id}を取得する
 	-> r.URL.Query().Get: クエリパラメータを取得　/search?keyword=jacketだとjacketを取得
+
 
 */

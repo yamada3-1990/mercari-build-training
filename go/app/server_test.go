@@ -1,11 +1,13 @@
 package app
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 
@@ -208,120 +210,146 @@ func TestAddItem(t *testing.T) {
 }
 
 // STEP 6-4: uncomment this test
-// func TestAddItemE2e(t *testing.T) {
-// 	if testing.Short() {
-// 		t.Skip("skipping e2e test")
-// 	}
+func TestAddItemE2e(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping e2e test")
+	}
 
-// 	db, closers, err := setupDB(t)
-// 	if err != nil {
-// 		t.Fatalf("failed to set up database: %v", err)
-// 	}
-// 	t.Cleanup(func() {
-// 		for _, c := range closers {
-// 			c()
-// 		}
-// 	})
+	db, closers, err := setupDB(t)
+	if err != nil {
+		t.Fatalf("failed to set up database: %v", err)
+	}
+	t.Cleanup(func() {
+		for _, c := range closers {
+			c()
+		}
+	})
 
-// 	type wants struct {
-// 		code int
-// 	}
-// 	cases := map[string]struct {
-// 		args map[string]string
-// 		wants
-// 	}{
-// 		"ok: correctly inserted": {
-// 			args: map[string]string{
-// 				"name":     "used iPhone 16e",
-// 				"category": "phone",
-// 			},
-// 			wants: wants{
-// 				code: http.StatusOK,
-// 			},
-// 		},
-// 		"ng: failed to insert": {
-// 			args: map[string]string{
-// 				"name":     "",
-// 				"category": "phone",
-// 			},
-// 			wants: wants{
-// 				code: http.StatusBadRequest,
-// 			},
-// 		},
-// 	}
+	type wants struct {
+		code int
+	}
+	cases := map[string]struct {
+		args map[string]string
+		wants
+	}{
+		"ok: correctly inserted": {
+			args: map[string]string{
+				"name":     "used iPhone 16e",
+				"category": "phone",
+			},
+			wants: wants{
+				code: http.StatusOK,
+			},
+		},
+		"ng: failed to insert": {
+			args: map[string]string{
+				"name":     "",
+				"category": "phone",
+			},
+			wants: wants{
+				code: http.StatusBadRequest,
+			},
+		},
+	}
 
-// 	for name, tt := range cases {
-// 		t.Run(name, func(t *testing.T) {
-// 			h := &Handlers{itemRepo: &itemRepository{db: db}}
+	for name, tt := range cases {
+		t.Run(name, func(t *testing.T) {
+			h := &Handlers{itemRepo: &itemRepository{db: db}}
 
-// 			values := url.Values{}
-// 			for k, v := range tt.args {
-// 				values.Set(k, v)
-// 			}
-// 			req := httptest.NewRequest("POST", "/items", strings.NewReader(values.Encode()))
-// 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			values := url.Values{}
+			for k, v := range tt.args {
+				values.Set(k, v)
+			}
+			req := httptest.NewRequest("POST", "/items", strings.NewReader(values.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-// 			rr := httptest.NewRecorder()
-// 			h.AddItem(rr, req)
+			rr := httptest.NewRecorder()
+			h.AddItem(rr, req)
 
-// 			// check response
-// 			if tt.wants.code != rr.Code {
-// 				t.Errorf("expected status code %d, got %d", tt.wants.code, rr.Code)
-// 			}
-// 			if tt.wants.code >= 400 {
-// 				return
-// 			}
-// 			for _, v := range tt.args {
-// 				if !strings.Contains(rr.Body.String(), v) {
-// 					t.Errorf("response body does not contain %s, got: %s", v, rr.Body.String())
-// 				}
-// 			}
+			// check response
+			if tt.wants.code != rr.Code {
+				t.Errorf("expected status code %d, got %d", tt.wants.code, rr.Code)
+			}
+			if tt.wants.code >= 400 {
+				return
+			}
+			for _, v := range tt.args {
+				if !strings.Contains(rr.Body.String(), v) {
+					t.Errorf("response body does not contain %s, got: %s", v, rr.Body.String())
+				}
+			}
 
-// 			// STEP 6-4: check inserted data
-// 		})
-// 	}
-// }
+			// STEP 6-4: check inserted data
+			tx, err := db.Begin()
+			if err != nil {
+				t.Fatalf("failed to start transaction: %v", err)
+			}
+			var item Item
+			// insertした要素をselectで持ってこれるか
+			err = tx.QueryRow("SELECT name, category FROM items WHERE name = ? AND category = ?", tt.args["name"], tt.args["category"]).Scan(&item.Name, &item.Category)
+			if err != nil {
+				t.Fatalf("failed to select item: %v", err)
+			}
 
-// func setupDB(t *testing.T) (db *sql.DB, closers []func(), e error) {
-// 	t.Helper()
+			expected := &Item{
+				Name:     tt.args["name"],
+				Category: tt.args["category"],
+			}
+			if diff := cmp.Diff(expected, item); diff != "" {
+				t.Errorf("unexpected response body (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
 
-// 	defer func() {
-// 		if e != nil {
-// 			for _, c := range closers {
-// 				c()
-// 			}
-// 		}
-// 	}()
+func setupDB(t *testing.T) (db *sql.DB, closers []func(), e error) {
+	t.Helper()
 
-// 	// create a temporary file for e2e testing
-// 	f, err := os.CreateTemp(".", "*.sqlite3")
-// 	if err != nil {
-// 		return nil, nil, err
-// 	}
-// 	closers = append(closers, func() {
-// 		f.Close()
-// 		os.Remove(f.Name())
-// 	})
+	defer func() {
+		if e != nil {
+			for _, c := range closers {
+				c()
+			}
+		}
+	}()
 
-// 	// set up tables
-// 	db, err = sql.Open("sqlite3", f.Name())
-// 	if err != nil {
-// 		return nil, nil, err
-// 	}
-// 	closers = append(closers, func() {
-// 		db.Close()
-// 	})
+	// create a temporary file for e2e testing
+	f, err := os.CreateTemp(".", "*.sqlite3")
+	if err != nil {
+		return nil, nil, err
+	}
+	closers = append(closers, func() {
+		f.Close()
+		os.Remove(f.Name())
+	})
 
-// 	// TODO: replace it with real SQL statements.
-// 	cmd := `CREATE TABLE IF NOT EXISTS items (
-// 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-// 		name VARCHAR(255),
-// 		category VARCHAR(255)
-// 	)`
-// 	_, err = db.Exec(cmd)
-// 	if err != nil {
-// 		return nil, nil, err
-// 	}
+	// set up tables
+	db, err = sql.Open("sqlite3", f.Name())
+	if err != nil {
+		return nil, nil, err
+	}
+	closers = append(closers, func() {
+		db.Close()
+	})
 
-// 	return db, closers, nil
-// }
+	// TODO: replace it with real SQL statements.
+	cmd := `CREATE TABLE IF NOT EXISTS items (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				name TEXT NOT NULL,
+				category_id INTEGER,
+				image_name TEXT NOT NULL,
+				FOREIGN KEY (category_id) REFERENCES categories(id)
+				);
+
+				-- categoriesテーブルの定義
+				CREATE TABLE IF NOT EXISTS categories (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					name TEXT NOT NULL UNIQUE
+				);`
+	_, err = db.Exec(cmd)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return db, closers, nil
+}

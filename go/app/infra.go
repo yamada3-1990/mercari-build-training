@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+
 	"database/sql"
 	"errors"
 	"log/slog"
@@ -144,6 +145,7 @@ func StoreImage(fileName string, image []byte) error {
 		return err
 	}
 	return nil
+
 }
 
 func (i *itemRepository) GetItemById(ctx context.Context, item_id string) (Item, error) {

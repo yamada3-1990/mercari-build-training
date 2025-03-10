@@ -19,7 +19,7 @@ type Item struct {
 	ID       int    `db:"id" json:"-"`
 	Name     string `db:"name" json:"name"`
 	Category string `json:"category"`
-	Image    string `db:"image_name" json:"image"` 
+	Image    string `db:"image_name" json:"image"`
 }
 
 type ItemRepository interface {
@@ -38,33 +38,18 @@ type itemRepository struct {
 // nilのitemRepoを使用したことによるnil参照panicを防ぐ
 func NewItemRepository(db *sql.DB) (ItemRepository, error) {
 	// items tableがなかったら作成
-	query := `
-                CREATE TABLE IF NOT EXISTS items (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        name TEXT NOT NULL,
-                        category_id INTEGER,
-                        image_name TEXT NOT NULL,
-                        FOREIGN KEY (category_id) REFERENCES categories(id)
-                );
-        `
-	_, err := db.Exec(query)
+	q, err := os.ReadFile("db/items.sql")
 	if err != nil {
-		slog.Error("failed to create items table", "error", err)
+		return &itemRepository{}, err
+	}
+
+	query := string(q)
+	_, err = db.Exec(query)
+	if err != nil {
+		slog.Error("failed to create items table and categories table", "error", err)
 		return nil, err
 	}
 
-	// categories tableが無かったら作成
-	query = `
-                CREATE TABLE IF NOT EXISTS categories (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        name TEXT NOT NULL UNIQUE
-                );
-        `
-	_, err = db.Exec(query)
-	if err != nil {
-		slog.Error("failed to create categories table: ", "error", err)
-		return nil, err
-	}
 	return &itemRepository{db: db}, nil
 }
 

@@ -119,11 +119,19 @@ func StoreImage(fileName string, image []byte) error {
 }
 
 func (i *itemRepository) GetItemById(ctx context.Context, item_id string) (Item, error) {
-	query := "SELECT id, name, category_id, image_name FROM items WHERE id = ?"
+	query := `
+				SELECT 
+					items.id, 
+					items.name, 
+					categories.name AS category, 
+					items.image_name 
+				FROM items
+				INNER JOIN categories ON items.category_id = categories.id
+				WHERE items.id = ?
+			`
 	row := i.db.QueryRow(query, item_id)
 	var item Item
-	var categoryID int
-	err := row.Scan(&item.ID, &item.Name, &categoryID, &item.Image)
+	err := row.Scan(&item.ID, &item.Name, &item.Category, &item.Image)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return Item{}, errItemNotFound
@@ -131,12 +139,6 @@ func (i *itemRepository) GetItemById(ctx context.Context, item_id string) (Item,
 			return Item{}, err
 		}
 	}
-	//categoryIDからcategoryNameを取得
-	err = i.db.QueryRow("SELECT name from categories where id = ?", categoryID).Scan(&item.Category)
-	if err != nil {
-		return Item{}, err
-	}
-
 	return item, nil
 }
 
@@ -176,64 +178,3 @@ func (i *itemRepository) SearchItemsByKeyword(ctx context.Context, keyword strin
 
 	return items, nil
 }
-
-/*
-
-*** STEP 4 ***
-GETとPOSTのリクエストの違いについて調べてみましょう
-	->GET:  サーバーにリクエストを送信、リソースを取得
-	->POST: サーバーにデータを送信、リソースの更新など
-
-ブラウザで http://127.0.0.1:9000/items にアクセスしても {"message": "item received: <name>"} が返ってこないのはなぜでしょうか？
-	-> server.go の route に GET /items がないから？
-
-アクセスしたときに返ってくるHTTPステータスコードはいくつですか？
-	-> 200 OK
-
-それはどんな意味をもつステータスコードですか？
-	-> リクエストが正常に処理された
-
-ハッシュ化とはなにか？
-	-> 特定のルール(ハッシュ関数)に基づいて値を変換すること
-
-SHA-256 以外にどんなハッシュ関数があるか調べてみましょう
-	-> SHA-3, MD5など >アルゴリズムの設計、セキュリティ強度、速度、用途が違う らしい
-
-Log levelとは？
-	-> ソフトウェアが記録するログ(どんな動作が行われたかの記録)の詳細度と重要度を調整するための仕組み
-
-webサーバーでは、本番はどのログレベルまで表示する？
-	-> INFO以上が一般的 開発環境だとDEBUG
-
-port (ポート番号)
-	-> コンピュータが通信に使用するプログラムを識別するための番号 HTTP:80 etc.
-
-localhost, 127.0.0.1
-	-> localhost: コンピューター自身を指し示すためのホスト名
-	-> 127.0.0.1: IPv4における特別なIPアドレス
-
-HTTPリクエストメソッド
-	-> Webサーバーにどのような処理をするかを伝える役割
-	-> GET/POST/PUT(更新)/PATCH(一部更新)/DELETE(削除)
-
-HTTPステータスコード (1XX, 2XX, 3XX, 4XX, 5XXはそれぞれどんな意味を持ちますか？)
-	-> 1XX: リクエストが受け付けられて処理が続いている(Informational)
-	-> 2XX: リクエストが正常に完了(Success)
-	-> 3XX: リクエストを完了するために追加のアクションが必要(Redirection)
-	-> 4XX: リクエストに問題あり(Client Error)
-	-> 5XX: サーバーがリクエストを処理できなかった(Server Error)
-
-
-*** STEP 5 ***
-jsonファイルではなくデータベース(SQLite)にデータを保存する利点は何がありますか？
-	-> dbだとデータの整合性がとりやすい、データ操作・検索が効率的(jsonだとファイル全体を読む込む必要がある)
-
-データベースの正規化とは何でしょうか？
-	-> データの重複を排除し、データの整合性を保つためのプロセス
-	-> これは第二正規形?
-
-*/
-
-// curlじゃなくて curl.exe で実行
-// cd go してから go run cmd/api/main.go でサーバーを起動するなら
-// main.go の実行ディレクトリは go/

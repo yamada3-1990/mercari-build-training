@@ -146,6 +146,10 @@ func parseAddItemRequest(r *http.Request) (*AddItemRequest, error) {
 		Image:    []byte(r.FormValue("image")),
 	}
 
+	if len(req.Image) == 0 {
+		req.Image = nil
+	}
+
 	// validation
 	if req.Name == "" {
 		return nil, errors.New("name is required")
@@ -153,17 +157,6 @@ func parseAddItemRequest(r *http.Request) (*AddItemRequest, error) {
 
 	if req.Category == "" {
 		return nil, errors.New("category is required")
-	}
-
-	if string(req.Image) == "" {
-		return nil, errors.New("image is required")
-	}
-
-	// 拡張子を取得して、jpgのみ受け付ける
-	fName := r.FormValue("image")
-	ex := filepath.Ext(fName)
-	if ex != ".jpg" {
-		return nil, errors.New("invalid image extension. Only accept: jpg")
 	}
 
 	return req, nil
@@ -175,15 +168,32 @@ func (s *Handlers) AddItem(w http.ResponseWriter, r *http.Request) {
 
 	req, err := parseAddItemRequest(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	fileName, err := s.storeImage(req.Image)
-	if err != nil {
-		slog.Error("failed to store image: ", "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	fileName := "default.jpg"
+	if len(req.Image) > 0 {
+		fileName, err = s.storeImage(req.Image)
+		if err != nil {
+			slog.Error("failed to store image: ", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// デフォルト画像をハッシュ化して保存
+		defaultImage, err := os.ReadFile(filepath.Join(s.imgDirPath, "default.jpg"))
+		if err != nil {
+			slog.Error("failed to read default image: ", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		fileName, err = s.storeImage(defaultImage)
+		if err != nil {
+			slog.Error("failed to store default image: ", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	item := &Item{
@@ -201,7 +211,15 @@ func (s *Handlers) AddItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	message := fmt.Sprintf("item received: %s", item.Name)
-	fmt.Fprint(w, message)
+	slog.Info(message)
+
+	resp := AddItemResponse{Message: message}
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(resp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 // storeImage stores an image and returns the file path and an error if any.
@@ -235,9 +253,7 @@ type GetImageRequest struct {
 func parseGetImageRequest(r *http.Request) (*GetImageRequest, error) {
 	req := &GetImageRequest{
 		FileName: r.PathValue("filename"), // from path parameter
-	}
-
-	// validate the request
+	} // validate the request
 	if req.FileName == "" {
 		return nil, errors.New("filename is required")
 	}
@@ -390,29 +406,6 @@ func (s *Handlers) SearchItemsByKeyword(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonData)
 }
-
-/*
-	そもそもハンドラーとは
-	-> HTTPリクエストを受け取り、適切なレスポンスを返す関数
-
-	step4-4
-	# ローカルから.jpgをポストする
-	$ curl \
-	-X POST \
-	--url 'http://localhost:9000/items' \
-	-F 'name=jacket' \
-	-F 'category=fashion' \
-	-F 'image=@images/local_image.jpg' <-ローカルのuploadしたいiamgeのパス "image=go/images/default.jpg"とか
-
-
-	r.PathValue と r.URL.Query().Get
-	-> http@//127.0.0.1:9000/Path?<query parameter>
-	-> r.PathValue: Pathを取得　/items/{item_id}だと{item_id}を取得する
-	-> r.URL.Query().Get: クエリパラメータを取得　/search?keyword=jacketだとjacketを取得
-
-
-*/

@@ -54,35 +54,24 @@ func NewItemRepository(db *sql.DB) (ItemRepository, error) {
 }
 
 func (i *itemRepository) Insert(ctx context.Context, item *Item) error {
-	var categoryID int
-
-	// categories tableから(categories tableの)name = item.Categoryのidを取得
-	err := i.db.QueryRow("SELECT id FROM categories WHERE name = ?", item.Category).Scan(&categoryID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			// 該当する行がなかったら = 新しいカテゴリーだったら
-			// categories tableのnameにitem.Categoryの値をinsert
-			res, err := i.db.Exec("INSERT INTO categories (name) VALUES (?)", item.Category)
-			if err != nil {
-				return err
-			}
-			// 最後に挿入された自動採番(AUTOINCREMENT)のidを取得
-			id, err := res.LastInsertId()
-			if err != nil {
-				return err
-			}
-			categoryID = int(id)
-		} else {
-			return err
-		}
-	}
-	// insert
-	query := "INSERT INTO items (name, category_id, image_name) VALUES (?, ?, ?)"
-	_, err = i.db.Exec(query, item.Name, categoryID, item.Image)
+	// 該当する行がなかったら = 新しいカテゴリーだったらcategoryを挿入
+	query := `INSERT OR IGNORE INTO categories (name) VALUES (?)`
+	_, err := i.db.Exec(query, item.Category)
 	if err != nil {
 		return err
 	}
 
+	// まとめてinsert
+	query = `
+			INSERT INTO items (name, category_id, image_name)
+				SELECT ?, categories.id, ?
+				FROM categories
+				WHERE categories.name = ?
+			`
+	_, err = i.db.Exec(query, item.Name, item.Image, item.Category)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -88,6 +88,7 @@ func (i *itemRepository) GetAll(ctx context.Context) ([]Item, error) {
                                 INNER JOIN
                                                 categories ON items.category_id = categories.id;
                         `
+
 	rows, err := i.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -157,6 +158,7 @@ func (i *itemRepository) SearchItemsByKeyword(ctx context.Context, keyword strin
                                 WHERE
                                                 items.name LIKE ?
                         `
+
 
 	// queryの?部分がkeywordで置き換えられる
 	// % はワイルドカード文字: 0文字以上の任意の文字列

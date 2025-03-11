@@ -356,7 +356,7 @@ func parseGetItemByKeywordRequest(r *http.Request) (*GetItemByKeywordRequest, er
 
 	// validation
 	if req.Keyword == "" {
-		return nil, errors.New("id is required")
+		return nil, errors.New("keyword is required")
 	}
 
 	return req, nil

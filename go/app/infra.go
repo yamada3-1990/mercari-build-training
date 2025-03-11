@@ -119,11 +119,19 @@ func StoreImage(fileName string, image []byte) error {
 }
 
 func (i *itemRepository) GetItemById(ctx context.Context, item_id string) (Item, error) {
-	query := "SELECT id, name, category_id, image_name FROM items WHERE id = ?"
+	query := `
+				SELECT 
+					items.id, 
+					items.name, 
+					categories.name AS category, 
+					items.image_name 
+				FROM items
+				INNER JOIN categories ON items.category_id = categories.id
+				WHERE items.id = ?
+			`
 	row := i.db.QueryRow(query, item_id)
 	var item Item
-	var categoryID int
-	err := row.Scan(&item.ID, &item.Name, &categoryID, &item.Image)
+	err := row.Scan(&item.ID, &item.Name, &item.Category, &item.Image)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return Item{}, errItemNotFound
@@ -131,12 +139,6 @@ func (i *itemRepository) GetItemById(ctx context.Context, item_id string) (Item,
 			return Item{}, err
 		}
 	}
-	//categoryIDからcategoryNameを取得
-	err = i.db.QueryRow("SELECT name from categories where id = ?", categoryID).Scan(&item.Category)
-	if err != nil {
-		return Item{}, err
-	}
-
 	return item, nil
 }
 

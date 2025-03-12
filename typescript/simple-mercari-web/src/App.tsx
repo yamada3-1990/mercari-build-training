@@ -16,7 +16,7 @@ function App() {
       <div>
         <Listing onListingCompleted={() => setReload(true)} />
       </div>
-      <div>
+      <div className="item-list-container">
         <ItemList reload={reload} onLoadCompleted={() => setReload(false)} />
       </div>
     </div>

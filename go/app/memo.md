@@ -238,6 +238,7 @@ pullできたらコンテナを実行
 ```
 docker run -p 9000:9000 ghcr.io/<github-id>/mercari-build-training:<branch-name>
 ```
+```http://localhost:9000```でアクセス
 
 
 ## Link

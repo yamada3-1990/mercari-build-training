@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
 import { postItem } from '~/api';
+import './Listing.css';
+
 
 interface Prop {
   onListingCompleted: () => void;
@@ -94,8 +96,8 @@ export const Listing = ({ onListingCompleted }: Prop) => {
             name="image"
             id="image"
             onChange={onFileChange}
-            // required
-            // ref={uploadImageRef}
+            ref={uploadImageRef}
+            required
           />
           <button type="submit">List this item</button>
         </div>

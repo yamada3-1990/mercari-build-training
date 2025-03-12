@@ -3,10 +3,11 @@
 .ItemListContainer {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem; 
-    max-width: 600px; 
-    margin: 0 auto; 
-    padding: 1rem;  
+    gap: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 1rem;
+    grid-auto-rows: 250px;
 }
 
 .ItemList {
@@ -15,10 +16,12 @@
     padding: 16px;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    background-color: rgb(255, 135, 135);
+    background-color: rgb(205, 205, 205);
     transition: transform 0.2s, box-shadow 0.2s;
     width: 150px;
     height: 200px;
+    align-items: center;
+    justify-content: center;
 }
 
 .ItemList:hover {
@@ -27,8 +30,8 @@
 }
 
 .ItemList img {
-    width: 80px;
-    height: 80px;
+    width: 90px;
+    height: 90px;
     object-fit: cover;
     border-radius: 6px;
     margin-right: 16px;
@@ -87,10 +90,10 @@ div>.ItemList:first-child {
     .ItemListContainer {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 1rem; 
-        max-width: 1200px; 
-        margin: 0 auto; 
-        padding: 1rem;  
+        gap: 1rem;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1rem;
     }
 
     div {
@@ -100,14 +103,19 @@ div>.ItemList:first-child {
     }
 
     .ItemList {
-        display: grid;
+        background-color: #222427;
+        min-height: 8vh;
+        display: flex;
         flex-direction: column;
-        height: 100%;
+        align-items: center;
+        justify-content: left;
+        font-size: calc(10px + 1vmin);
+        color: white;
     }
 
     .ItemList img {
-        width: 100%;
-        height: 200px;
+        width: 90px;
+        height: 90px;
         margin-right: 0;
         margin-bottom: 12px;
     }

@@ -12,22 +12,14 @@
   justify-content: left;
   font-size: calc(10px + 1vmin);
   color: white;
-}
-
-.Listing {
-  background-color: #222427;
-  min-height: 8vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: left;
-  font-size: calc(10px + 1vmin);
-  color: white;
+  width: 100%;
 }
 
 
 
-.item-list-container {
+
+
+/* .item-list-container {
   flex: 2;
   background-color: white;
   border-radius: 5px;
@@ -35,7 +27,7 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-}
+} */
 
 .App-link {
   color: #61dafb;

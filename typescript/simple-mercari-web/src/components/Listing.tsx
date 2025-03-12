@@ -8,14 +8,14 @@ interface Prop {
 type FormDataType = {
   name: string;
   category: string;
-  image: string | File;
+  image: File | null;
 };
 
 export const Listing = ({ onListingCompleted }: Prop) => {
   const initialState = {
     name: '',
     category: '',
-    image: '',
+    image: null,
   };
   const [values, setValues] = useState<FormDataType>(initialState);
 
@@ -30,16 +30,16 @@ export const Listing = ({ onListingCompleted }: Prop) => {
   const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setValues({
       ...values,
-      [event.target.name]: event.target.files![0],
+      [event.target.name]: event.target.files![0] || null,
     });
   };
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     // Validate field before submit
-    const REQUIRED_FILEDS = ['name', 'image'];
+    const REQUIRED_FILEDS = ['name'];
     const missingFields = Object.entries(values)
-      .filter(([, value]) => !value && REQUIRED_FILEDS.includes(value))
+      .filter(([key, value]) => !value && REQUIRED_FILEDS.includes(key))
       .map(([key]) => key);
 
     if (missingFields.length) {
@@ -94,8 +94,8 @@ export const Listing = ({ onListingCompleted }: Prop) => {
             name="image"
             id="image"
             onChange={onFileChange}
-            required
-            ref={uploadImageRef}
+            // required
+            // ref={uploadImageRef}
           />
           <button type="submit">List this item</button>
         </div>

@@ -227,6 +227,11 @@ HTTPリクエスト/レスポンス等のハンドリング、ハンドラのロ
 	-> r.PathValue: Pathを取得　/items/{item_id}だと{item_id}を取得する
 	-> r.URL.Query().Get: クエリパラメータを取得　/search?keyword=jacketだとjacketを取得
 
+### docker(step10)
+1. docker desktopを起動  
+2. ```docker build -t build2024/web:latest <Dockerfileのあるディレクトリ>```
+3. ``` docker run -d -p 3000:3000 build2024/web:latest```
+
 ### ■step 8: github actionについて
 変更をcommit/pushしたら自動的(pushをトリガーとして)にbuild.ymlが実行される  
 	->docker imageのビルドとか  

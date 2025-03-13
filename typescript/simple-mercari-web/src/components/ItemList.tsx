@@ -36,7 +36,7 @@ export const ItemList = ({ reload, onLoadCompleted }: Prop) => {
             {/* TODO: Task 2: Show item images */}
             <img src={`http://localhost:9000/images/${item.image_name}.jpg`} />
             <p>
-              <span>{item.name}</span>
+              <span className='itemName'>{item.name}</span>
               <br />
               <span>- {item.category}</span>
             </p>

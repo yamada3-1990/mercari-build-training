@@ -211,8 +211,8 @@ HTTPリクエスト/レスポンス等のハンドリング、ハンドラのロ
 
 **❓チュートリアルのdocker-composeファイルにはいくつのサービスが定義されていますか？それらはどのようなサービスですか？**
 * 2つ(web, redis)
-* web: カレントディレクトリ内にあるDockerfileから構築したイメージを使う
-* redis: Docker Hubレジストリにある公開Redisイメージを使う
+* web: Webアプリケーションを提供するフロントエンドまたはバックエンドのサーバー
+* redis: キーバリューストア型データベース
 
 **❓webサービスとredisサービスは異なる方法で image を取得しています。docker-compose upを実行した際に、各imageはどこから取得されているか確認しましょう。**
 * web: ローカル(Tagがlatestだから)
@@ -242,7 +242,7 @@ HTTPリクエスト/レスポンス等のハンドリング、ハンドラのロ
 	-> r.PathValue: Pathを取得　/items/{item_id}だと{item_id}を取得する
 	-> r.URL.Query().Get: クエリパラメータを取得　/search?keyword=jacketだとjacketを取得
 
-### docker(step10)
+### ■docker(step10)
 1. docker desktopを起動  
 2. ```docker build -t build2024/web:latest <Dockerfileのあるディレクトリ>```
 3. ``` docker run -d -p 3000:3000 build2024/web:latest```
@@ -259,7 +259,19 @@ pullできたらコンテナを実行
 ↓   
 ```start npm```  
 ↓  
-```http://localhost:3000/```でアクセス
+```http://localhost:3000/```でアクセス  
+
+### ■step10
+```mercari-build-training/```に移動  
+↓   
+```$ docker-compose up --build -d```  
+↓  
+```http://localhost:3000/```で確認  
+
+### CORSとは
+* 異なるオリジン間でのリソース共有を許可するための仕組み
+* 違う場所(オリジン)からウェブページがデータをもらったり送ったりできるかどうかを決めるルールのこと
+* A「データもらっていい？」B「いいよ」となったらBからデータがもらえる
 
 
 ## Link
@@ -267,7 +279,7 @@ pullできたらコンテナを実行
 🔗[go言語 ファイルの拡張子のみを取得する | mebee](https://mebee.info/2021/05/28/post-23288/)  
 🔗[今goのエラーハンドリングを無難にしておく方法（2021.09現在）](https://zenn.dev/nekoshita/articles/097e00c6d3d1c9)  
 🔗[Go言語でSQLite3を使う](https://zenn.dev/teasy/articles/go-sqlite3-sample)  
-🔗[【Go言語】database/sqlパッケージによるデータベース操作入門 - sqlite3 - Ike Tech Blog](https://iketechblog.com/database-sql-go-sqlite3/) 
+🔗[【Go言語】database/sqlパッケージによるデータベース操作入門 - sqlite3 - Ike Tech Blog](https://iketechblog.com/database-sql-go-sqlite3/)  
 🔗[Binary was compiled with 'CGO_ENABLED=0', go-sqlite3 requires cgo to work.](https://github.com/mattn/go-sqlite3/issues/855)    
 🔗[os package - os - Go Packages](https://pkg.go.dev/os#pkg-variables)  
 🔗[[入門]GoでSQLite3を使いデータベース操作を行ってみる](https://zenn.dev/tara_is_ok/articles/15b04694466bec)  
@@ -276,6 +288,8 @@ pullできたらコンテナを実行
 🔗[Go database/sql の操作ガイドあったんかい](https://sourjp.github.io/posts/go-db/)  
 🔗[mockgenが2023年６月２８日で読み取り専用になった](https://zenn.dev/135yshr/articles/6fa5ccc644ba29)    
 🔗[GolangでDBアクセスがあるユニットテストのやり方を考える](https://qiita.com/seya/items/582c2bdcca4ad50b03b7)   
+🔗[Docker Compose をはじめよう](https://matsuand.github.io/docs.docker.jp.onthefly/compose/gettingstarted/)   
+🔗[オリジン間リソース共有 (CORS)](https://developer.mozilla.org/ja/docs/Web/HTTP/CORS)   
 
 
 

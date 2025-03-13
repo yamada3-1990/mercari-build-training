@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  api:
+    build: # ビルドする
+      context: ./go
+      dockerfile: Dockerfile
+    container_name: api_service # 任意、分かりやすくするため
+    ports:
+      - "9000:9000"
+    environment:
+      - FRONT_URL=http://localhost:3000 # どこからリクエストが来るのかを知るため
+    networks:
+      - app_network
+
+  web:
+    build:
+      context: ./typescript/simple-mercari-web
+      dockerfile: Dockerfile
+    container_name: web_service
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:9000 # このURLのAPIにリクエストを送る
+    depends_on:
+      - api
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge

@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import { postItem } from '~/api';
-import './Listing.css';
 
 
 interface Prop {

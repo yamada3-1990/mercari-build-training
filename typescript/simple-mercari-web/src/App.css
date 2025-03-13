@@ -12,6 +12,7 @@
   justify-content: center;
   color: white;
   text-align: center;
+  font-size: larger;
 }
 
 .Listing {
@@ -26,6 +27,11 @@
   color: white;
 }
 
+.Listing input {
+  position: relative;
+  left: 10px;
+  bottom: 10px;
+}
 
 /* ItemList */
 .ItemListContainer {
@@ -45,6 +51,7 @@
   border-radius: 8px;
   color: #333;
   text-align: center;
+  height: 200px;
 }
 
 .ItemList p {
@@ -54,11 +61,21 @@
   justify-content: center;
 }
 
+.ItemList span {
+  line-height: .1;
+  font-weight: 300;
+}
+
 .ItemList img {
   width: 100%;
   height: auto;
   object-fit: cover;
   border-radius: 10px;
+}
+
+.ItemList .itemName {
+  font-weight: bold;
+  font-size: large;
 }
 
 .ItemList:hover {

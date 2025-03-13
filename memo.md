@@ -207,6 +207,21 @@ HTTPリクエスト/レスポンス等のハンドリング、ハンドラのロ
 **❓モックを利用するメリットとデメリットについて考えてみましょう**
 * 単体テストが簡単
 
+### STEP10: docker-composeを利用して複数のサービスを動かす
+
+**❓チュートリアルのdocker-composeファイルにはいくつのサービスが定義されていますか？それらはどのようなサービスですか？**
+* 2つ(web, redis)
+* web: カレントディレクトリ内にあるDockerfileから構築したイメージを使う
+* redis: Docker Hubレジストリにある公開Redisイメージを使う
+
+**❓webサービスとredisサービスは異なる方法で image を取得しています。docker-compose upを実行した際に、各imageはどこから取得されているか確認しましょう。**
+* web: ローカル(Tagがlatestだから)
+* rdis: Docker Hub(Tagがalpineだから)
+
+**❓docker-composeでは、サービスから他のサービスのコンテナに接続することができます。webサービスは、redisサービスとどのように名前解決をし、接続していますか？**  
+* "redis" をホスト名として解決  
+* ```$ docker network inspect composetest_default```で確認  
+
 
 ## なるほど
 `go run cmd/api/main.go` でサーバーを起動するならmain.go の実行ディレクトリは `go/`

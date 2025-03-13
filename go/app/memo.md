@@ -267,6 +267,8 @@ pullできたらコンテナを実行
 ```$ docker-compose up --build -d```  
 ↓  
 ```http://localhost:3000/```で確認  
+↓  
+```docker-compose stop```でストップ
 
 ### CORSとは
 * 異なるオリジン間でのリソース共有を許可するための仕組み

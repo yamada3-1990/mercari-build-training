@@ -230,15 +230,16 @@ HTTPリクエスト/レスポンス等のハンドリング、ハンドラのロ
 ### ■step 8: github actionについて
 変更をcommit/pushしたら自動的(pushをトリガーとして)にbuild.ymlが実行される  
 	->docker imageのビルドとか  
-```https://github.com/yamada3-1990/mercari-build-training/pkgs/container/mercari-build-training```に行くとコマンドがあるから実行
-```
-docker pull ghcr.io/<github-id>/mercari-build-training:<branch-name>
-```
-pullできたらコンテナを実行
-```
-docker run -p 9000:9000 ghcr.io/<github-id>/mercari-build-training:<branch-name>
-```
-```http://localhost:9000```でアクセス
+```https://github.com/yamada3-1990/mercari-build-training/pkgs/container/mercari-build-training```に行くとコマンドがあるから実行  
+↓  
+```docker pull ghcr.io/<github-id>/mercari-build-training:<branch-name>```  
+pullできたらコンテナを実行  
+↓  
+```docker run -p 9000:9000 ghcr.io/<github-id>/mercari-build-training:<branch-name>```  
+↓   
+```start npm```  
+↓  
+```http://localhost:3000/```でアクセス
 
 
 ## Link

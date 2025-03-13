@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Item, fetchItems } from '~/api';
-import './ItemList.css';
 
 // const PLACEHOLDER_IMAGE = import.meta.env.VITE_FRONTEND_URL + '/logo192.png';
 
@@ -38,8 +37,8 @@ export const ItemList = ({ reload, onLoadCompleted }: Prop) => {
             <img src={`http://localhost:9000/images/${item.image_name}.jpg`} />
             <p>
               <span>{item.name}</span>
-              {/* <br />
-              <span>- {item.category}</span> */}
+              <br />
+              <span>- {item.category}</span>
             </p>
           </div>
         );

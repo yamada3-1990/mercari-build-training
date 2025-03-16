@@ -107,7 +107,7 @@ func (s *Handlers) GetItems(w http.ResponseWriter, r *http.Request) {
 			ID       int    `json:"id"`
 			Name     string `json:"name"`
 			Category string `json:"category"`
-			Image    string `json:"image"`
+			Image    string `json:"image_name"`
 		} `json:"items"`
 	}{}
 
@@ -116,7 +116,7 @@ func (s *Handlers) GetItems(w http.ResponseWriter, r *http.Request) {
 			ID       int    `json:"id"`
 			Name     string `json:"name"`
 			Category string `json:"category"`
-			Image    string `json:"image"`
+			Image    string `json:"image_name"`
 		}{
 			ID:       item.ID,
 			Name:     item.Name,

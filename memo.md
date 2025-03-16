@@ -257,7 +257,7 @@ pullできたらコンテナを実行
 ↓  
 ```docker run -p 9000:9000 ghcr.io/<github-id>/mercari-build-training:<branch-name>```  
 ↓   
-```start npm```  
+```npm start ```  
 ↓  
 ```http://localhost:3000/```でアクセス  
 

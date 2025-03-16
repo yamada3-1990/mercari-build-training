@@ -19,7 +19,7 @@ type Item struct {
 	ID       int    `db:"id" json:"id"`
 	Name     string `db:"name" json:"name"`
 	Category string `json:"category"`
-	Image    string `db:"image_name" json:"image"`
+	Image    string `db:"image_name" json:"image_name"`
 }
 
 type ItemRepository interface {

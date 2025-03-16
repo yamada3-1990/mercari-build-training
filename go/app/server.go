@@ -156,7 +156,8 @@ func parseAddItemRequest(r *http.Request) (*AddItemRequest, error) {
 		// Get the image file
 		file, header, err := r.FormFile("image")
 		if err != nil {
-			if !errors.Is(err, http.ErrMissingFile) { // ファイルがない場合はエラーにしない。
+			if !errors.Is(err, http.ErrMissingFile) { 
+				// ファイルがない場合はエラーにしない
 				return nil, fmt.Errorf("failed to get image file: %w", err)
 			}
 			// ファイルがない場合は空のimageDataで続ける

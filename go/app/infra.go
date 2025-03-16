@@ -54,25 +54,40 @@ func NewItemRepository(db *sql.DB) (ItemRepository, error) {
 }
 
 func (i *itemRepository) Insert(ctx context.Context, item *Item) error {
-	// 該当する行がなかったら = 新しいカテゴリーだったらcategoryを挿入
-	query := `INSERT OR IGNORE INTO categories (name) VALUES (?)`
-	_, err := i.db.Exec(query, item.Category)
+	tx, err := i.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// カテゴリが既に存在するか確認
+	var categoryID int64
+	err = tx.QueryRowContext(ctx, "SELECT id FROM categories WHERE name = ?", item.Category).Scan(&categoryID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// カテゴリが存在しない場合は挿入
+			_, err = tx.ExecContext(ctx, "INSERT INTO categories (name) VALUES (?)", item.Category)
+			if err != nil {
+				return err
+			}
+			// 挿入したカテゴリのIDを取得
+			err = tx.QueryRowContext(ctx, "SELECT id FROM categories WHERE name = ?", item.Category).Scan(&categoryID)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	// itemsテーブルに挿入
+	query := `INSERT INTO items (name, category_id, image_name) VALUES (?, ?, ?)`
+	_, err = tx.ExecContext(ctx, query, item.Name, categoryID, item.Image)
 	if err != nil {
 		return err
 	}
 
-	// まとめてinsert
-	query = `
-			INSERT INTO items (name, category_id, image_name)
-				SELECT ?, categories.id, ?
-				FROM categories
-				WHERE categories.name = ?
-			`
-	_, err = i.db.Exec(query, item.Name, item.Image, item.Category)
-	if err != nil {
-		return err
-	}
-	return nil
+	return tx.Commit()
 }
 
 func (i *itemRepository) GetAll(ctx context.Context) ([]Item, error) {
@@ -158,7 +173,6 @@ func (i *itemRepository) SearchItemsByKeyword(ctx context.Context, keyword strin
                                 WHERE
                                                 items.name LIKE ?
                         `
-
 
 	// queryの?部分がkeywordで置き換えられる
 	// % はワイルドカード文字: 0文字以上の任意の文字列

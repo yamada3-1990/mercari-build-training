@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -140,21 +141,59 @@ type AddItemResponse struct {
 
 // parseAddItemRequest parses and validates the request to add an item.
 func parseAddItemRequest(r *http.Request) (*AddItemRequest, error) {
-	req := &AddItemRequest{
-		Name:     r.FormValue("name"),
-		Category: r.FormValue("category"),
-		Image:    []byte(r.FormValue("image")),
+	var req = &AddItemRequest{}
+
+	// multipart/form-dataかを確認
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+		err := r.ParseMultipartForm(32 << 20) // 32MBまで
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse multipart form: %w", err)
+		}
+
+		req.Name = r.FormValue("name")
+		req.Category = r.FormValue("category")
+
+		// Get the image file
+		file, header, err := r.FormFile("image")
+		if err != nil {
+			if !errors.Is(err, http.ErrMissingFile) { // ファイルがない場合はエラーにしない。
+				return nil, fmt.Errorf("failed to get image file: %w", err)
+			}
+			// ファイルがない場合は空のimageDataで続ける
+		} else {
+			defer file.Close()
+
+			// jpgのみ受け付ける
+			if !strings.HasSuffix(strings.ToLower(header.Filename), ".jpg") && !strings.HasSuffix(strings.ToLower(header.Filename), ".jpeg") {
+				return nil, errors.New("only .jpg or .jpeg files are allowed")
+			}
+
+			// Read image data
+			imageData, err := io.ReadAll(file)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read image data: %w", err)
+			}
+			if len(imageData) == 0 {
+				return nil, errors.New("image data is empty")
+			}
+
+			req.Image = imageData
+		}
+
+	} else { // multipart/form-dataじゃなかったら
+		err := r.ParseForm()
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse form: %w", err)
+		}
+
+		req.Name = r.FormValue("name")
+		req.Category = r.FormValue("category")
 	}
 
-	if len(req.Image) == 0 {
-		req.Image = nil
-	}
-
-	// validation
+	// validaion
 	if req.Name == "" {
 		return nil, errors.New("name is required")
 	}
-
 	if req.Category == "" {
 		return nil, errors.New("category is required")
 	}
@@ -181,7 +220,7 @@ func (s *Handlers) AddItem(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		// デフォルト画像をハッシュ化して保存
+		// デフォルト画像を読み込んで保存
 		defaultImage, err := os.ReadFile(filepath.Join(s.imgDirPath, "default.jpg"))
 		if err != nil {
 			slog.Error("failed to read default image: ", "error", err)

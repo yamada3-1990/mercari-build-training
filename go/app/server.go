@@ -104,6 +104,7 @@ func (s *Handlers) GetItems(w http.ResponseWriter, r *http.Request) {
 
 	response := struct {
 		Items []struct {
+			ID       int    `json:"id"`
 			Name     string `json:"name"`
 			Category string `json:"category"`
 			Image    string `json:"image"`
@@ -112,10 +113,12 @@ func (s *Handlers) GetItems(w http.ResponseWriter, r *http.Request) {
 
 	for _, item := range items {
 		response.Items = append(response.Items, struct {
+			ID       int    `json:"id"`
 			Name     string `json:"name"`
 			Category string `json:"category"`
 			Image    string `json:"image"`
 		}{
+			ID:       item.ID,
 			Name:     item.Name,
 			Category: item.Category,
 			Image:    item.Image,
@@ -156,7 +159,7 @@ func parseAddItemRequest(r *http.Request) (*AddItemRequest, error) {
 		// Get the image file
 		file, header, err := r.FormFile("image")
 		if err != nil {
-			if !errors.Is(err, http.ErrMissingFile) { 
+			if !errors.Is(err, http.ErrMissingFile) {
 				// ファイルがない場合はエラーにしない
 				return nil, fmt.Errorf("failed to get image file: %w", err)
 			}

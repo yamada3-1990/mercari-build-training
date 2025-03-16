@@ -16,7 +16,7 @@ var errImageNotFound = errors.New("image not found")
 var errItemNotFound = errors.New("item not found")
 
 type Item struct {
-	ID       int    `db:"id" json:"-"`
+	ID       int    `db:"id" json:"id"`
 	Name     string `db:"name" json:"name"`
 	Category string `json:"category"`
 	Image    string `db:"image_name" json:"image"`
@@ -93,16 +93,16 @@ func (i *itemRepository) Insert(ctx context.Context, item *Item) error {
 func (i *itemRepository) GetAll(ctx context.Context) ([]Item, error) {
 	// itemsとcategoriesをいったんinner join
 	query := `
-                                SELECT
-                                                items.id,
-                                                items.name,
-                                                categories.name AS category,
-                                                items.image_name
-                                FROM
-                                                items
-                                INNER JOIN
-                                                categories ON items.category_id = categories.id;
-                        `
+				SELECT
+					items.id,
+					items.name,
+					categories.name AS category,
+					items.image_name
+				FROM
+					items
+				INNER JOIN
+					categories ON items.category_id = categories.id;
+			`
 
 	rows, err := i.db.Query(query)
 	if err != nil {

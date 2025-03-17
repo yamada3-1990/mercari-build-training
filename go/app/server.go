@@ -185,13 +185,7 @@ func parseAddItemRequest(r *http.Request) (*AddItemRequest, error) {
 		}
 
 	} else { // multipart/form-dataじゃなかったら
-		err := r.ParseForm()
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse form: %w", err)
-		}
-
-		req.Name = r.FormValue("name")
-		req.Category = r.FormValue("category")
+		return nil, errors.New("Content-Type must be multipart/form-data")
 	}
 
 	// validaion
@@ -211,7 +205,8 @@ func (s *Handlers) AddItem(w http.ResponseWriter, r *http.Request) {
 
 	req, err := parseAddItemRequest(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		// 400エラー投げる
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 

@@ -16,6 +16,7 @@ export const Listing = ({ onListingCompleted }: Prop) => {
   const initialState = {
     name: '',
     category: '',
+    // 画像はバリデーションしていないのでnullを許容
     image: null,
   };
   const [values, setValues] = useState<FormDataType>(initialState);

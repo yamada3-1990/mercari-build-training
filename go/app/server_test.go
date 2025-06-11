@@ -125,6 +125,7 @@ func TestHelloHandler(t *testing.T) {
 }
 
 func TestAddItem(t *testing.T) {
+	// .Parallel: テストフレームワークの一部であり、テスト関数を並行して実行できるように
 	t.Parallel()
 
 	type wants struct {
@@ -141,7 +142,10 @@ func TestAddItem(t *testing.T) {
 				"name":     "used iPhone 16e",
 				"category": "phone",
 			},
+			// モックオブジェクトの動作を定義するための無名関数
 			injector: func(m *MockItemRepository) {
+				// m.EXPECT() は、モックオブジェクトに対して、特定のメソッドが呼び出されることを期待
+				// .Any() :Insert メソッドが任意の引数で呼び出されることを期待します。
 				m.EXPECT().Insert(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			wants: wants{
@@ -157,6 +161,8 @@ func TestAddItem(t *testing.T) {
 			injector: func(m *MockItemRepository) {
 				// STEP 6-3: define mock expectation
 				// failed to insert
+				// テストケース内で新しくエラーを定義して投げてる！？なんでだ
+				// Insertが吐く可能性のあるエラーで検証すべきだった？
 				m.EXPECT().Insert(gomock.Any(), gomock.Any()).Return(errors.New("failed to insert"))
 			},
 			wants: wants{
@@ -193,6 +199,8 @@ func TestAddItem(t *testing.T) {
 				return
 			}
 
+			// レスポンスボディ全体を比較するように変更
+			// たしか、テキストは完全に同じ(バイト変換しても同じだったはず)なのにこのもとのテストが失敗していたから変えた記憶ある
 			if !bytes.Equal(rr.Body.Bytes(), []byte(tt.wants.body)) {
 				// fmt.Printf("expected: %x\n", []byte(tt.wants.body))
 				// fmt.Printf("got:      %x\n", rr.Body.Bytes())
@@ -203,6 +211,8 @@ func TestAddItem(t *testing.T) {
 }
 
 // STEP 6-4: uncomment this test
+// システム全体を統合した上で、ユーザの操作をシミュレーションしてテストする
+// 実際のデータベースやデータを用いて全体の機能をテスト
 func TestAddItemE2e(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping e2e test")

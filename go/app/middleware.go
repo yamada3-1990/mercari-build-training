@@ -9,6 +9,7 @@ import (
 // This file provides some utility functions for middleware.
 // You do not have to modify this file.
 
+// CORSを有効にする
 func simpleCORSMiddleware(next http.Handler, origin string, methods []string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
@@ -24,6 +25,7 @@ func simpleCORSMiddleware(next http.Handler, origin string, methods []string) ht
 	})
 }
 
+// HTTPリクエストに関する情報をログに出力
 func simpleLoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		slog.Info("request received", "method", r.Method, "path", r.URL.Path, "remote_addr", r.RemoteAddr, "user_agent", r.UserAgent())

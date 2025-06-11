@@ -54,6 +54,8 @@ func (s Server) Run() int {
 	h := &Handlers{imgDirPath: s.ImageDirPath, itemRepo: itemRepo}
 
 	// set up routes
+	// HTTPリクエストのルーティングを設定
+	// handler:HTTPリクエストを処理する関数やメソッド
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", h.Hello)
 	mux.HandleFunc("POST /items", h.AddItem)
@@ -125,6 +127,7 @@ func (s *Handlers) GetItems(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	// HTTPレスポンスのヘッダーを設定し、JSON形式でデータを書き込んでいます
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -147,6 +150,7 @@ func parseAddItemRequest(r *http.Request) (*AddItemRequest, error) {
 	var req = &AddItemRequest{}
 
 	// multipart/form-dataかを確認
+	// リクエストがファイルアップロードを伴う multipart/form-data 形式であるかどうかを判断する
 	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 		err := r.ParseMultipartForm(32 << 20) // 32MBまで
 		if err != nil {
@@ -333,10 +337,12 @@ func (s *Handlers) GetImage(w http.ResponseWriter, r *http.Request) {
 }
 
 // buildImagePath builds the image path and validates it.
+// 画像を表示する際の処理
 func (s *Handlers) buildImagePath(imageFileName string) (string, error) {
 	imgPath := filepath.Join(s.imgDirPath, filepath.Clean(imageFileName))
 
 	// to prevent directory traversal attacks
+	// filepath.Rel(basepath, targetpath) は、basepath から targetpath への相対パスを返す
 	rel, err := filepath.Rel(s.imgDirPath, imgPath)
 	if err != nil || strings.HasPrefix(rel, "..") {
 		return "", fmt.Errorf("invalid image path: %s", imgPath)
@@ -348,6 +354,7 @@ func (s *Handlers) buildImagePath(imageFileName string) (string, error) {
 	}
 
 	// check if the image exists
+	// Stat: シンボリックリンクを辿って、リンク先のファイルやディレクトリの情報を返su
 	_, err = os.Stat(imgPath)
 	if err != nil {
 		return imgPath, errImageNotFound
@@ -357,6 +364,8 @@ func (s *Handlers) buildImagePath(imageFileName string) (string, error) {
 }
 
 /* GetItemById */
+// リクエスト型をわざわざ宣言している理由: データの構造が明確, 
+// リクエストに新しいパラメータを追加する場合、構造体にフィールドを追加するだけで済むなど
 type GetItemByIdRequest struct {
 	Id string
 }

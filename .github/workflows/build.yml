@@ -2,16 +2,20 @@ name: build
 run-name: ${{ github.actor }} is building ${{ github.ref_name }} 🚀
 on: [push]
 
+# ワークフロー全体で使用する環境変数を定義
 env:
  REGISTRY: ghcr.io
  IMAGE_NAME: ${{ github.repository }}
 
+#  ワークフローで実行するジョブを定義
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
      contents: read
      packages: write
+
+     # ジョブの中で実行するステップを定義
     steps:
     # Checkout repository
     - name: Checkout
@@ -43,4 +47,5 @@ jobs:
         context: go
         push: true
         tags: ${{ steps.meta.outputs.tags }}
+        # labelはメタデータに記述されるらしい
         labels: ${{ steps.meta.outputs.labels }}

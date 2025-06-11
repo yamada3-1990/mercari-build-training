@@ -13,6 +13,7 @@ const (
 func main() {
 	// This is the entry point of the application.
 	// You don't need to modify this function.
+	// サーバーを起動
 	os.Exit(app.Server{
 		Port:         port,
 		ImageDirPath: imageDirPath,

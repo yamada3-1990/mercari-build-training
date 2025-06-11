@@ -1,3 +1,5 @@
+# githook: gitリポジトリに何かしらの操作をトリガーとして実行されるスクリプト
+
 #!/bin/sh
 if git rev-parse --verify HEAD >/dev/null 2>&1
 then
